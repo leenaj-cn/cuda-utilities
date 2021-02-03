@@ -1,0 +1,1 @@
+nvcc -clean cuda-utilities.exe
