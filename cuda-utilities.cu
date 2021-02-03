@@ -128,13 +128,20 @@ __global__ void simpleAtomic_kernel(int * d_data)
     const int tx = blockDim.x * blockIdx.x + threadIdx.x;
 
     //if(tx == 0)printf("d_data[0]=%d, d_data[1]=%d\n",d_data[0],d_data[1]);
-    //atomicAdd(&d_data[0], 10);
-    //if(tx == 0)printf("d_data[0]=%d\n",d_data[0]);
-
-    //atomicSub(&d_data[1], 10);
+    atomicAdd(&d_data[0], 10);
+    //printf("tx=%d, d_data[0]=%d\n",tx, d_data[0]);
+    atomicSub(&d_data[1], 10);
     //if(tx == 0)printf("d_data[1]=%d\n",d_data[1]);
-    d_data[0] +=2;
-
+    //d_data[0] += 10;
+    if(tx == 1) atomicExch(&d_data[2], tx);
+    if(tx == 20) atomicMax(&d_data[3], tx);
+    if(tx == 3) atomicMin(&d_data[4], tx);
+    atomicInc((unsigned int *)&d_data[5], 16); //atomic increment
+    atomicDec((unsigned int *)&d_data[6], 137);
+    atomicCAS(&d_data[7], tx-1, tx);
+    atomicAnd(&d_data[8], 2*tx+7);
+    atomicOr(&d_data[9], 1 << tx);
+    atomicXor(&d_data[10], tx);
 
 }
 void simpleAtomicIntrinsics()
@@ -158,13 +165,17 @@ void simpleAtomicIntrinsics()
     CheckError(cudaMalloc((void**)&d_data, memSize));
     CheckError(cudaMemcpyAsync(d_data, h_data, memSize, cudaMemcpyHostToDevice, stream));
 
-    dim3 block(256);
-    dim3 grid(64);
+    dim3 block(32);
+    dim3 grid(10);
     simpleAtomic_kernel<<<grid, block, 0, stream>>>(d_data);
     
     CheckError(cudaMemcpyAsync(h_data, d_data, memSize, cudaMemcpyDeviceToHost,stream));
     CheckError(cudaStreamSynchronize(stream));
 
+    for(int i=0; i< dataSize; i++)
+    {
+        printf("h_data[%d]=%d\n", i, h_data[i]);
+    }
     printf("h_data[0]:%d, h_data[1]=%d\n", h_data[0],h_data[1]);
 
     //free(h_data);
